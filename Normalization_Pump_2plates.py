@@ -4,7 +4,6 @@ from smallFunctions import *
 from commands import *
 from Buffer import *
 import time
-from Steps_And_Parameters import *
 
 PROTOCOL_PATH = 'a_Normalization.py'
 EXCEL_PATH = r'Normalization.xlsx'
@@ -40,6 +39,7 @@ layout_sheet = getExcelSheet(EXCEL_PATH,"Quantif")
 
 plate_type_on_spacer_1 = getValue(layout_sheet,"Plate1 type (for normalized samples)")
 plate_type_on_spacer_2 = getValue(layout_sheet,"Plate2  type (for normalized samples)")
+
 
 if plate_type_on_spacer_1=="Greiner (half/full area)":
     protocolFile.write("    del protocol.deck['4']\n")
@@ -120,12 +120,12 @@ for plate in range(nb_of_plates):
         addBuffer_DiffVolsCols(protocolFile,pipet300,ladder_usedWells,op2_plates[plate],LADDERS,ladder_vol_by_col)
 
 
-    for col in inter_columns([concentrations_usedColumns,volumes_to_normalize_usedColumns,volumes_for_OP2_usedColumns,ladder_usedColumns]):
+    for col in inter_columns([concentrations_usedColumns,volumes_for_OP2_usedColumns]):
 
-        if TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" or OP2_PLATE == "Yes" :
+        if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and volumes_to_normalize_by_col[col-1]!=0) or (OP2_PLATE == "Yes" and volumes_for_OP2_by_col[col-1]!=0):
             pickup_tips_multi_WL(protocolFile, pipet20, tips_20[plate], col)
 
-        if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and col in volumes_to_normalize_usedColumns) :
+        if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and volumes_to_normalize_by_col[col-1]!=0) :
 
             aspirate_WL(protocolFile, pipet20,
                         colOfLabware(mother_plates[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM) + ")", \
@@ -134,7 +134,7 @@ for plate in range(nb_of_plates):
                         colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM) + ")", \
                         volumes_to_normalize_by_col[col-1], DISP_FLOW_RATE)
 
-        if NORMALIZATION=="Yes" :
+        if NORMALIZATION=="Yes":
 
             for wellConc in concentrations:
                 well=wellConc[0]
@@ -153,7 +153,7 @@ for plate in range(nb_of_plates):
                         # pause_WL(protocolFile)
                         dispense(protocolFile, vol_to_add)
 
-        if OP2_PLATE=="Yes":
+        if OP2_PLATE=="Yes" and volumes_for_OP2_by_col[col-1]!=0 :
 
             mix_WL(protocolFile,pipet20,3,15,colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM_OP2) +")", MIX_FLOW_RATE)
 
@@ -168,7 +168,7 @@ for plate in range(nb_of_plates):
                    colOfLabware(op2_plates[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM_OP2) + ")", \
                    MIX_FLOW_RATE)
 
-        if transfer_of_oligos or OP2_PLATE:
+        if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and volumes_to_normalize_by_col[col-1]!=0) or (OP2_PLATE == "Yes" and volumes_for_OP2_by_col[col-1]!=0):
             return_WL(protocolFile, pipet20)
 
 #if all went well, we save the excel file
