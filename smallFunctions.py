@@ -8,8 +8,19 @@ def fromWellsToColumns(wells):
 
     return columns
 
-def getColumn(wells):
-    wellColumn = ((wells-1)//8) +1
+def firstValuesOfColumns(WellValue_list):
+    ''' WellValue_list is a list of [well_number,value]
+    returns a list of 12, containing the value for the first item in the column (0 if doesn't exist)'''
+
+    first_values=[0]*12
+    for WellValue in WellValue_list:
+        well=WellValue[0]
+        if (well - 1) % 8 == 0:
+            first_values[getColumn(well)-1]=WellValue[1]
+    return first_values
+
+def getColumn(well):
+    wellColumn = ((well-1)//8) +1
     return wellColumn
 
 def is_list_empty(list):
@@ -25,6 +36,16 @@ def wellnb2str(well_nb):
 
     return chr(64+well_row) + str(well_col)
 
+def inter_columns(list_of_list_of_columns):
+    '''Returns a list containing all the columns appearing at least in one of the column lists, in numeric order'''
+    cols=[]
+    for col in range(12):
+        for column_list in list_of_list_of_columns:
+            if col+1 in column_list:
+                cols.append(col+1)
+                break
+    return cols
+
 if __name__ == "__main__":
     # usedWells = [1, 5, 9, 11, 36, 45]
     # usedWellsEven = []
@@ -36,6 +57,7 @@ if __name__ == "__main__":
     #         usedWellsOdd.append(well)
     # print(usedWellsEven)
     # print(usedWellsOdd)
-    print(wellnb2str(96))
+    #print(wellnb2str(96))
     #print(is_list_empty(list))
     #print(list.index([5,8]))
+    print(inter_columns([[1,2,3,4,5],[2,3,4],[8,9,10,11,12,13]]))

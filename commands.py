@@ -68,6 +68,72 @@ def addBuffer(protocolFile, multi_pipet, usedWells, destLabware, buffer=None, vo
     if returntip == 1:
         return_WL(protocolFile, multi_pipet)
 
+def addBuffer_DiffVolsCols(protocolFile, multi_pipet, usedWells, destLabware, buffer=None, volumes=[0,0,0,0,0,0,0,0,0,0,0,0], sourceColumnIndex=0,
+              bufferReservoir=0, tipcolumn=0, pickuptip=1, returntip=1):
+    if buffer == None or usedWells == [] or volumes == [0,0,0,0,0,0,0,0,0,0,0,0]:
+        return
+
+    #  variables
+    BLOW_OUT_DIST_FROM_TOP = 5
+    CONDITIONING_VOL = buffer.conditioningVolume
+    EXCESS_VOL = buffer.excessVolume
+    AIR_GAP_VOL = buffer.airGapVol
+
+    # Fetch tips
+    if pickuptip == 1:
+        pickup_tips_multi_WL(protocolFile, multi_pipet, buffer.tipLabware, buffer.tipcolumn[tipcolumn])
+
+    usedColumns = fromWellsToColumns(usedWells)
+    usedColumnsAndVolumes = [[col, volumes[col-1]] for col in usedColumns]
+
+    while usedColumnsAndVolumes != []:
+        volToAspirate = 0
+        columnsAndVolumesToDispense = []
+        for colVol in usedColumnsAndVolumes.copy():
+            nextVol = volToAspirate + colVol[1]
+            if nextVol > (buffer.tipVolume - CONDITIONING_VOL - EXCESS_VOL - AIR_GAP_VOL):
+                volRemaining = (buffer.tipVolume - CONDITIONING_VOL - EXCESS_VOL - AIR_GAP_VOL) - volToAspirate
+                volToAspirate = (buffer.tipVolume - CONDITIONING_VOL - EXCESS_VOL - AIR_GAP_VOL)
+                columnsAndVolumesToDispense.append([colVol[0], volRemaining])
+                usedColumnsAndVolumes[usedColumnsAndVolumes.index(colVol)][1] = colVol[1] - volRemaining
+                break
+            else:
+                volToAspirate = volToAspirate + colVol[1]
+                columnsAndVolumesToDispense.append(colVol)
+                usedColumnsAndVolumes.remove(colVol)
+                if volToAspirate == (buffer.tipVolume - CONDITIONING_VOL - EXCESS_VOL - AIR_GAP_VOL):
+                    break
+
+        aspirate_WL(protocolFile, multi_pipet,
+                    colOfLabware(buffer.sourceLabware[bufferReservoir], buffer.sourceColumns[sourceColumnIndex],
+                                 buffer.sourceNbWells),
+                    volToAspirate + CONDITIONING_VOL + EXCESS_VOL, buffer.aspiratingFlowRate)
+        delay_WL(protocolFile, 0.5)
+        dispense_WL(protocolFile, multi_pipet,
+                    colOfLabware(buffer.sourceLabware[bufferReservoir], buffer.sourceColumns[sourceColumnIndex],
+                                 buffer.sourceNbWells),
+                    CONDITIONING_VOL, buffer.dispenseFlowRate)
+        if AIR_GAP_VOL != 0:
+            air_gap_WL(protocolFile, multi_pipet, AIR_GAP_VOL)
+
+        for colVol in columnsAndVolumesToDispense:
+            dispense_WL(protocolFile, multi_pipet,
+                        colOfLabware(destLabware, colVol[0], 96) + ".top(" + str(-buffer.distFromLWTop) + ")",
+                        colVol[1] + AIR_GAP_VOL, buffer.dispenseFlowRate)
+            if buffer.name == "Click mix AA":
+                touch_tip_WL(protocolFile, multi_pipet, colOfLabware(destLabware, colVol[0], 96), 0.3)
+            if AIR_GAP_VOL != 0:
+                air_gap_WL(protocolFile, multi_pipet, AIR_GAP_VOL)
+
+        blow_out_WL(protocolFile, multi_pipet,
+                    colOfLabware(buffer.sourceLabware[bufferReservoir], buffer.sourceColumns[sourceColumnIndex],
+                                 buffer.sourceNbWells) + ".top(-" + str(BLOW_OUT_DIST_FROM_TOP) + ")")
+
+    #  Unfetch tips
+    if returntip == 1:
+        return_WL(protocolFile, multi_pipet)
+
+
 
 def cleavedTransferEppenToInvitek(protocolFile, multi_pipet, usedWells, fromLabware, toLabware, tipBox, volume):
     if usedWells == [] or volume == 0:

@@ -1,4 +1,5 @@
 from excelRead import *
+from excel_save import *
 from smallFunctions import *
 from commands import *
 from Buffer import *
@@ -35,15 +36,22 @@ header_file = open(HEADER_PATH, "r")
 protocolFile.write(header_file.read() + "\n")
 header_file.close()
 
-if type_of_plate_on_spacer==2:
+layout_sheet = getExcelSheet(EXCEL_PATH,"Quantif")
+
+plate_type_on_spacer_1 = getValue(layout_sheet,"Plate1 type (for normalized samples)")
+plate_type_on_spacer_2 = getValue(layout_sheet,"Plate2  type (for normalized samples)")
+
+if plate_type_on_spacer_1=="Greiner (half/full area)":
     protocolFile.write("    del protocol.deck['4']\n")
-    protocolFile.write("    del protocol.deck['5']\n")
     protocolFile.write("    plate_to_normalize1 = protocol.load_labware('greiner_96well_full_area_350ul_onspacer', 4)\n")
+    protocolFile.write("\n\n")
+
+if plate_type_on_spacer_2=="Greiner (half/full area)":
+    protocolFile.write("    del protocol.deck['5']\n")
     protocolFile.write("    plate_to_normalize2 = protocol.load_labware('greiner_96well_full_area_350ul_onspacer', 5)\n")
     protocolFile.write("\n\n")
 
-excel_sheet = getExcelSheet(EXCEL_PATH,"Quantif")
-#excel_sheet_norm = getExcelSheet(EXCEL_PATH,"Normalization")
+
 
 op2_plates=[op2_plate1,op2_plate2]
 mother_plates=[mother_plate1,mother_plate2]
@@ -51,29 +59,11 @@ plates_to_normalize=[plate_to_normalize1,plate_to_normalize2]
 
 tips_20=[tiprack_20_plate1,tiprack_20_plate2]
 
-for plate in range(2):
+column_offset_by_plate=[0,16]
 
-    if plate==0:
-        concentrations=getConcentrations(excel_sheet)
-    elif plate==1:
-        concentrations = getConcentrations2(excel_sheet)
+nb_of_plates=int(getValue(layout_sheet,"Nb of plates"))
 
-#----- NT 20/09/23 ----
-# Besoin de remettre "for plate...."?
-
-#for plate in range(2):
-
-    #if plate == 0:
-        #TargetConcentrations = getTargetConcentrations(excel_sheet_norm)
-    #elif plate == 1:
-        #TargetConcentrations = getTargetConcentrations2(excel_sheet_norm)
-
- # ----- end NT 20/09/23 ----
-
-    used_wells=[wellConc[0] for wellConc in concentrations]
-    used_columns=fromWellsToColumns(used_wells)
-    print("Plate " + str(plate+1))
-    print(used_columns)
+for plate in range(nb_of_plates):
 
     # transfer from mother plate to norma plate
     ASP_FROM_BOTTOM = 1.3
@@ -89,31 +79,69 @@ for plate in range(2):
     DISP_FLOW_RATE_OP2 = 1
     MIX_FLOW_RATE_OP2 = 3
 
-    if OP2_PLATE :
+    #Get All parameters from excel file
+
+    NORMALIZATION = getValue(layout_sheet, "Normalization ")
+    TRANSFER_OF_SAMPLES_FOR_NORMA = getValue(layout_sheet, "Transfer of samples to be normalized")
+    OP2_PLATE = getValue(layout_sheet, "Preparation of OP2 plate")
+
+    concentrations = get96plate(layout_sheet, "Plate1 : Sample initial concentration (µM)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
+    concentrations_usedWells = [WellConc[0] for WellConc in concentrations]
+    concentrations_usedColumns = fromWellsToColumns(concentrations_usedWells)
+
+    volumes_to_normalize = get96plate(layout_sheet, "Plate1 : Volume of sample to be normalized (µl)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
+    volumes_to_normalize_usedWells = [WellVol[0] for WellVol in volumes_to_normalize]
+    volumes_to_normalize_usedColumns = fromWellsToColumns(volumes_to_normalize_usedWells)
+    volumes_to_normalize_by_col = firstValuesOfColumns(volumes_to_normalize)
+    print(volumes_to_normalize_by_col)
+
+    target_concentrations = get96plate(layout_sheet, "Plate1 : Target concentration (µM)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
+    target_concentrations_usedWells = [WellConc[0] for WellConc in target_concentrations]
+    target_concentrations_usedColumns = fromWellsToColumns(target_concentrations_usedWells)
+    target_concentrations_dict = {wellConc[0]:wellConc[1] for wellConc in target_concentrations }
+
+    volumes_for_OP2 = get96plate(layout_sheet, "Plate1 : Volume of normalized sample to be transfered (µl)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
+    volumes_for_OP2_usedWells = [WellVol[0] for WellVol in volumes_for_OP2]
+    volumes_for_OP2_usedColumns = fromWellsToColumns(volumes_for_OP2_usedWells)
+    volumes_for_OP2_by_col = firstValuesOfColumns(volumes_for_OP2)
+
+    ladder_volumes = get96plate(layout_sheet, "Plate1 : Volume of ladder (µl)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
+    ladder_usedWells = [WellVol[0] for WellVol in ladder_volumes]
+    ladder_usedColumns = fromWellsToColumns(ladder_usedWells)
+    ladder_vol_by_col = firstValuesOfColumns(ladder_volumes)
+
+
+    print("Plate " + str(plate + 1))
+    print(concentrations_usedColumns)
+
+    if OP2_PLATE=="Yes" :
 
         #Add ladders to OP2 plate
-        addBuffer(protocolFile,pipet300,used_wells,op2_plates[plate],LADDERS,volume_ladders)
+        addBuffer_DiffVolsCols(protocolFile,pipet300,ladder_usedWells,op2_plates[plate],LADDERS,ladder_vol_by_col)
 
-    for col in used_columns:
 
-        if transfer_of_oligos or OP2_PLATE :
+    for col in inter_columns([concentrations_usedColumns,volumes_to_normalize_usedColumns,volumes_for_OP2_usedColumns,ladder_usedColumns]):
+
+        if TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" or OP2_PLATE == "Yes" :
             pickup_tips_multi_WL(protocolFile, pipet20, tips_20[plate], col)
 
-        if (NORMALIZATION and transfer_of_oligos) :
+        if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and col in volumes_to_normalize_usedColumns) :
 
             aspirate_WL(protocolFile, pipet20,
                         colOfLabware(mother_plates[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM) + ")", \
-                        volume_norm, ASP_FLOW_RATE)
+                        volumes_to_normalize_by_col[col-1], ASP_FLOW_RATE)
             dispense_WL(protocolFile, pipet20,
                         colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM) + ")", \
-                        volume_norm, DISP_FLOW_RATE)
+                        volumes_to_normalize_by_col[col-1], DISP_FLOW_RATE)
 
-        if NORMALIZATION :
+        if NORMALIZATION=="Yes" :
 
             for wellConc in concentrations:
                 well=wellConc[0]
-                if getColumn(well)==col:
-                    conc=wellConc[1]
+                if getColumn(well) == col:
+                    conc = wellConc[1]
+                    conc_norm = target_concentrations_dict[well]
+                    volume_norm = volumes_to_normalize_by_col[col-1]
                     vol_to_add = int((volume_norm * conc) / conc_norm) - volume_norm
                     if vol_to_add <= 0:
                         print("Warning, concentration not high enough in " + wellnb2str(well) + ".")
@@ -125,16 +153,16 @@ for plate in range(2):
                         # pause_WL(protocolFile)
                         dispense(protocolFile, vol_to_add)
 
-        if OP2_PLATE:
+        if OP2_PLATE=="Yes":
 
             mix_WL(protocolFile,pipet20,3,15,colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM_OP2) +")", MIX_FLOW_RATE)
 
             aspirate_WL(protocolFile, pipet20,
                         colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM_OP2) + ")", \
-                        volume_op2, ASP_FLOW_RATE_OP2)
+                        volumes_for_OP2_by_col[col-1], ASP_FLOW_RATE_OP2)
             dispense_WL(protocolFile, pipet20,
                         colOfLabware(op2_plates[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM_OP2) + ")", \
-                        volume_op2, DISP_FLOW_RATE_OP2)
+                        volumes_for_OP2_by_col[col-1], DISP_FLOW_RATE_OP2)
 
             mix_WL(protocolFile, pipet20, 3, 15,
                    colOfLabware(op2_plates[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM_OP2) + ")", \
@@ -143,3 +171,5 @@ for plate in range(2):
         if transfer_of_oligos or OP2_PLATE:
             return_WL(protocolFile, pipet20)
 
+#if all went well, we save the excel file
+saveExcelFile()

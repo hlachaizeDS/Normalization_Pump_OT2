@@ -9,6 +9,33 @@ def getExcelSheet(path,sheet_name):
     layout_sheet = wb.sheet_by_name(sheet_name)
     return layout_sheet
 
+def getValue(layout_sheet,str_to_find,offset_row=0,offset_col=1):
+
+    indexes=f_index(layout_sheet,str_to_find)
+    return layout_sheet.cell_value(indexes[0] + offset_row,indexes[1] + offset_col)
+
+def get96plate(layout_sheet,str_to_find,offset_row=0,offset_col=1):
+
+    indexes=f_index(layout_sheet,str_to_find)
+    WellValue=[]
+    well=1
+    for col in range(12):
+        for row in range(8):
+            value=layout_sheet.cell_value(row + indexes[0] + offset_row, col + indexes[1] + offset_col)
+            if value!='':
+                WellValue.append([well,value])
+            well+=1
+
+    return WellValue
+
+def f_index(layout_sheet,str_to_find):
+    for row in range(layout_sheet.nrows):
+        for col in range(layout_sheet.ncols):
+            if str(layout_sheet.cell_value(row,col)).replace("\n"," ").replace("  "," ").split(" ") == str_to_find.replace("\n"," ").replace("  "," ").split(" "):
+                return [row,col]
+    print("Couldnt find " + str_to_find)
+    return None
+
 def getSequences(layout_sheet):
 
     sequences=[]
@@ -144,4 +171,6 @@ def fromWellsToColumns(wells):
     return columns
 
 if __name__ == "__main__":
-    print('ok')
+    layout_sheet=getExcelSheet(r'Normalization.xlsx',"Quantif")
+    print(get96plate(layout_sheet,"Plate1 : Sample initial concentration (µM)",3,1))
+    print(getValue(layout_sheet,"Normalization "))
