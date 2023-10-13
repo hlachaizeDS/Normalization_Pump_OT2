@@ -93,7 +93,6 @@ for plate in range(nb_of_plates):
     volumes_to_normalize_usedWells = [WellVol[0] for WellVol in volumes_to_normalize]
     volumes_to_normalize_usedColumns = fromWellsToColumns(volumes_to_normalize_usedWells)
     volumes_to_normalize_by_col = firstValuesOfColumns(volumes_to_normalize)
-    print(volumes_to_normalize_by_col)
 
     target_concentrations = get96plate(layout_sheet, "Plate1 : Target concentration (µM)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
     target_concentrations_usedWells = [WellConc[0] for WellConc in target_concentrations]
@@ -110,15 +109,17 @@ for plate in range(nb_of_plates):
     ladder_usedColumns = fromWellsToColumns(ladder_usedWells)
     ladder_vol_by_col = firstValuesOfColumns(ladder_volumes)
 
-
-    print("Plate " + str(plate + 1))
-    print(concentrations_usedColumns)
+    #Lists of used columns to return to the user
+    columns_add_ladders = [0] * 12
+    columns_to_normalize = [0] *12
+    columns_transfer_from_mother = [0] * 12
+    columns_transfer_from_norma = [0] * 12
 
     if OP2_PLATE=="Yes" :
 
         #Add ladders to OP2 plate
         addBuffer_DiffVolsCols(protocolFile,pipet300,ladder_usedWells,op2_plates[plate],LADDERS,ladder_vol_by_col)
-
+        columns_add_ladders = ladder_usedColumns
 
     for col in inter_columns([concentrations_usedColumns,volumes_for_OP2_usedColumns]):
 
@@ -133,6 +134,8 @@ for plate in range(nb_of_plates):
             dispense_WL(protocolFile, pipet20,
                         colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM) + ")", \
                         volumes_to_normalize_by_col[col-1], DISP_FLOW_RATE)
+
+            columns_transfer_from_mother[col-1]=col
 
         if NORMALIZATION=="Yes":
 
@@ -153,6 +156,8 @@ for plate in range(nb_of_plates):
                         # pause_WL(protocolFile)
                         dispense(protocolFile, vol_to_add)
 
+                    columns_to_normalize [col-1] = col
+
         if OP2_PLATE=="Yes" and volumes_for_OP2_by_col[col-1]!=0 :
 
             mix_WL(protocolFile,pipet20,3,15,colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM_OP2) +")", MIX_FLOW_RATE)
@@ -168,8 +173,19 @@ for plate in range(nb_of_plates):
                    colOfLabware(op2_plates[plate], col, 96) + ".bottom(" + str(DISP_FROM_BOTTOM_OP2) + ")", \
                    MIX_FLOW_RATE)
 
+            columns_transfer_from_norma[col-1]=col
+
         if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and volumes_to_normalize_by_col[col-1]!=0) or (OP2_PLATE == "Yes" and volumes_for_OP2_by_col[col-1]!=0):
             return_WL(protocolFile, pipet20)
+
+    #Information returned to user
+    print("\nPlate " + str(plate + 1))
+    print(getValue(layout_sheet,"Plate1 type (for normalized samples)",offset_col=1 + column_offset_by_plate[plate]))
+    print(" - Transfer from mother plate : " + str(12-columns_transfer_from_mother.count(0)) + " columns " + str(columns_transfer_from_mother))
+    print(" - Normalize : " + str(12-columns_to_normalize.count(0)) + " columns " + str(columns_to_normalize))
+    print(" - Transfer to OP2 plate : " + str(12-columns_transfer_from_norma.count(0)) + " columns " + str(columns_transfer_from_norma))
+    print(" - Add Ladder : " + str(12-columns_add_ladders.count(0)) + " columns " + str(columns_add_ladders))
+
 
 #if all went well, we save the excel file
 saveExcelFile()
