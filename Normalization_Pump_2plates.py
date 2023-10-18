@@ -105,7 +105,7 @@ for plate in range(nb_of_plates):
     volumes_for_OP2_by_col = firstValuesOfColumns(volumes_for_OP2)
 
     ladder_volumes = get96plate(layout_sheet, "Plate1 : Volume of ladder (µl)", offset_row=3,offset_col=1 + column_offset_by_plate[plate])
-    ladder_usedWells = [WellVol[0] for WellVol in ladder_volumes]
+    ladder_usedWells = [WellVol[0] for WellVol in ladder_volumes if WellVol[1]!=0]
     ladder_usedColumns = fromWellsToColumns(ladder_usedWells)
     ladder_vol_by_col = firstValuesOfColumns(ladder_volumes)
 
@@ -119,7 +119,7 @@ for plate in range(nb_of_plates):
 
         #Add ladders to OP2 plate
         addBuffer_DiffVolsCols(protocolFile,pipet300,ladder_usedWells,op2_plates[plate],LADDERS,ladder_vol_by_col)
-        columns_add_ladders = ladder_usedColumns
+        columns_add_ladders = [col if ladder_vol_by_col[col-1]!=0 else 0 for col in range(1,13)]
 
     for col in inter_columns([concentrations_usedColumns,volumes_for_OP2_usedColumns]):
 
