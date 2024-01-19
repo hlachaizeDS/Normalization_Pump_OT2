@@ -40,7 +40,6 @@ layout_sheet = getExcelSheet(EXCEL_PATH,"Quantif")
 plate_type_on_spacer_1 = getValue(layout_sheet,"Plate1 type (for normalized samples)")
 plate_type_on_spacer_2 = getValue(layout_sheet,"Plate2  type (for normalized samples)")
 
-
 if plate_type_on_spacer_1=="Greiner (half/full area)":
     protocolFile.write("    del protocol.deck['4']\n")
     protocolFile.write("    plate_to_normalize1 = protocol.load_labware('greiner_96well_full_area_350ul_onspacer', 4)\n")
@@ -50,7 +49,6 @@ if plate_type_on_spacer_2=="Greiner (half/full area)":
     protocolFile.write("    del protocol.deck['5']\n")
     protocolFile.write("    plate_to_normalize2 = protocol.load_labware('greiner_96well_full_area_350ul_onspacer', 5)\n")
     protocolFile.write("\n\n")
-
 
 
 op2_plates=[op2_plate1,op2_plate2]
@@ -64,6 +62,8 @@ column_offset_by_plate=[0,16]
 nb_of_plates=int(getValue(layout_sheet,"Nb of plates"))
 
 for plate in range(nb_of_plates):
+
+    print("\nPlate " + str(plate + 1))
 
     # transfer from mother plate to norma plate
     ASP_FROM_BOTTOM = 1.3
@@ -126,6 +126,7 @@ for plate in range(nb_of_plates):
         if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and volumes_to_normalize_by_col[col-1]!=0) or (OP2_PLATE == "Yes" and volumes_for_OP2_by_col[col-1]!=0):
             pickup_tips_multi_WL(protocolFile, pipet20, tips_20[plate], col)
 
+
         if (NORMALIZATION=="Yes" and TRANSFER_OF_SAMPLES_FOR_NORMA == "Yes" and volumes_to_normalize_by_col[col-1]!=0) :
 
             aspirate_WL(protocolFile, pipet20,
@@ -179,7 +180,6 @@ for plate in range(nb_of_plates):
             return_WL(protocolFile, pipet20)
 
     #Information returned to user
-    print("\nPlate " + str(plate + 1))
     print(getValue(layout_sheet,"Plate1 type (for normalized samples)",offset_col=1 + column_offset_by_plate[plate]))
     print(" - Transfer from mother plate : " + str(12-columns_transfer_from_mother.count(0)) + " columns " + str(columns_transfer_from_mother))
     print(" - Normalize : " + str(12-columns_to_normalize.count(0)) + " columns " + str(columns_to_normalize))
