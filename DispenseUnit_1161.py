@@ -1,7 +1,7 @@
 import pyTMCL
 import math
-import time
 from serial import *
+import sys
 
 
 class DispenseUnit_1161:
@@ -91,7 +91,6 @@ class DispenseUnit_1161:
 
 
 if __name__ == "__main__":
-
     serial_port = Serial('/dev/ttyACM0', 9600)
     bus = pyTMCL.connect(serial_port)
 
