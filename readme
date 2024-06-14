@@ -1,10 +1,33 @@
 To use pump on Opentrons:
 
+-- OPENTRONS APP
+
 Establish ssh connection with opentrons
 https://support.opentrons.com/s/article/Setting-up-SSH-access-to-your-OT-2
 
 Copy both DipsenseUnit_1161.py and the whole pyTMCL folder to /data (not the same command for files and folder!)
 https://support.opentrons.com/s/article/Copying-files-to-and-from-your-OT-2-with-SCP
+First command would look like:
+scp -i ot2_ssh_key C:\Users\User\PycharmProjects\Normalization_Pump_OT2\DispenseUnit_1161.py root@169.254.198.13:/data
+Second command :
+scp -r -i ot2_ssh_key C:\Users\User\PycharmProjects\Normalization_Pump_OT2\pyTMCL root@169.254.198.13:/data
 
 Can check they are at the right place through SSH connection
 https://support.opentrons.com/s/article/Connecting-to-your-OT-2-with-SSH
+Basically launching a command line and running
+ssh -i ot2_ssh_key root@169.254.198.13
+(needs one cd.. to get up)
+
+--INSTALL scripts to directly control the pump
+Copy bats and the robotIP.txt file of the folder firmware_pump to the desktop. Modify the .txt to match your robot's IP.
+
+-- INSTALL the right firmware in the pump
+Install TMCL-IDE on the TMCM1161 card of the pump, and upload v4 firmware (pilotage pompe _V1A-v4.tmc) in it.
+
+--INSTALL project on the computer
+from https://github.com/hlachaizeDS/Normalization_Pump_OT2, and install dependancies from requirements.txt
+Generate an opentrons worklist by running 'Normalization_Pump_2plates.py'
+Add the folder of the project to the quick access in windows
+
+-- OPENTRONS APP
+
