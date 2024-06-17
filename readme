@@ -30,4 +30,5 @@ Generate an opentrons worklist by running 'Normalization_Pump_2plates.py'
 Add the folder of the project to the quick access in windows
 
 -- OPENTRONS APP
-
+Install required labware by clicking in the App on More -> Custome Labware -> open the Custom Labware Definitions Folder
+and copy paste the labwares from the Labwares folder in it
