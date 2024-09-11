@@ -161,6 +161,9 @@ for plate in range(nb_of_plates):
 
         if OP2_PLATE=="Yes" and volumes_for_OP2_by_col[col-1]!=0 :
 
+            #Mixing goes straight to the bottom of the well ('direct motion' in Opentrons) so to avoid
+            #crashes we move over the column to mix befofehand
+            move_to_WL(protocolFile,pipet20,colOfLabware(plates_to_normalize[plate], col, 96) + ".top()")
             mix_WL(protocolFile,pipet20,3,15,colOfLabware(plates_to_normalize[plate], col, 96) + ".bottom(" + str(ASP_FROM_BOTTOM_OP2) +")", MIX_FLOW_RATE)
 
             aspirate_WL(protocolFile, pipet20,
